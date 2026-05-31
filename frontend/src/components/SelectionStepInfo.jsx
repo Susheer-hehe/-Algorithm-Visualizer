@@ -7,7 +7,7 @@ const actionConfig = {
     bg: 'bg-amber-500/10 border-amber-500/20',
     icon: '⟷',
     describe: (indices, array) =>
-      `Comparing arr[${indices[0]}] = ${array[indices[0]]} with arr[${indices[1]}] = ${array[indices[1]]}`,
+      `Comparing current element arr[${indices[0]}] = ${array[indices[0]]} with minimum found so far arr[${indices[1]}] = ${array[indices[1]]}`,
   },
   SWAP: {
     label: 'SWAP',
@@ -15,19 +15,19 @@ const actionConfig = {
     bg: 'bg-rose-500/10 border-rose-500/20',
     icon: '⇄',
     describe: (indices, array) =>
-      `Swapped arr[${indices[0]}] = ${array[indices[0]]} and arr[${indices[1]}] = ${array[indices[1]]}`,
+      `Swapping minimum element arr[${indices[1]}] = ${array[indices[0]]} with first unsorted element arr[${indices[0]}] = ${array[indices[1]]}`,
   },
   LOCKED: {
-    label: 'LOCKED',
+    label: 'SORTED',
     color: 'text-emerald-400',
     bg: 'bg-emerald-500/10 border-emerald-500/20',
     icon: '✓',
     describe: (indices, array) =>
-      `Element arr[${indices[0]}] = ${array[indices[0]]} is now in its final position`,
+      `Element arr[${indices[0]}] = ${array[indices[0]]} is now in its final sorted position`,
   },
 };
 
-export default function StepInfo({ step }) {
+export default function SelectionStepInfo({ step }) {
   if (!step) {
     return (
       <div className="h-16 flex items-center justify-center text-slate-500 text-sm font-mono">

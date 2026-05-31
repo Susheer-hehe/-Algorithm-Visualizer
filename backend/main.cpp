@@ -11,6 +11,9 @@
 #include "include/json.hpp"
 #include "sorting/bubble_sort.h"
 #include "sorting/insertion_sort.h"
+#include "sorting/selection_sort.h"
+#include "pathfinding/bfs.h"
+#include "pathfinding/dfs.h"
 #include <iostream>
 #include <string>
 
@@ -68,6 +71,8 @@ int main() {
                 bubbleSort(arr, size, history);
             } else if (algorithm == "insertion") {
                 insertionSort(arr, size, history);
+            } else if (algorithm == "selection") {
+                selectionSort(arr, size, history);
             } else {
                 res.status = 400;
                 res.set_content("{\"error\":\"Unknown algorithm: " + algorithm + "\"}", "application/json");
@@ -118,7 +123,70 @@ int main() {
         res.set_content("{\"status\":\"running\",\"engine\":\"C++ Algorithm Visualizer\"}", "application/json");
     });
 
+    // ─── POST /api/pathfind ──────────────────────────────────────────────
+    svr.Post("/api/pathfind", [](const httplib::Request& req, httplib::Response& res) {
+        setCORSHeaders(res);
+        try {
+            auto requestBody = json::parse(req.body);
+            std::string algorithm = requestBody.value("algorithm", "bfs");
+            int rows = requestBody.value("gridRows", 20);
+            int cols = requestBody.value("gridCols", 40);
+            
+            auto startNode = requestBody["start"];
+            int startR = startNode["r"];
+            int startC = startNode["c"];
+
+            auto endNode = requestBody["end"];
+            int endR = endNode["r"];
+            int endC = endNode["c"];
+
+            auto wallsArray = requestBody["walls"]; // flat array of 1s and 0s
+            int totalNodes = rows * cols;
+            int* grid = new int[totalNodes];
+            
+            for (int i = 0; i < totalNodes; i++) {
+                grid[i] = wallsArray[i].get<int>();
+            }
+
+            PathfindingHistory history;
+
+            if (algorithm == "bfs") {
+                runBFS(rows, cols, startR, startC, endR, endC, grid, history);
+            } else if (algorithm == "dfs") {
+                runDFS(rows, cols, startR, startC, endR, endC, grid, history);
+            } else {
+                res.status = 400;
+                res.set_content("{\"error\":\"Unknown algorithm: " + algorithm + "\"}", "application/json");
+                delete[] grid;
+                return;
+            }
+
+            std::string responseJSON = "{";
+            responseJSON += "\"status\":\"success\",";
+            responseJSON += "\"history\":";
+            responseJSON += history.toJSON();
+            responseJSON += "}";
+
+            res.set_content(responseJSON, "application/json");
+            delete[] grid;
+
+        } catch (const std::exception& e) {
+            res.status = 500;
+            std::string errorJSON = "{\"error\":\"";
+            errorJSON += e.what();
+            errorJSON += "\"}";
+            res.set_content(errorJSON, "application/json");
+        }
+    });
+
+    // ─── OPTIONS /api/pathfind (CORS Preflight) ─────────────────────────
+    svr.Options("/api/pathfind", [](const httplib::Request& req, httplib::Response& res) {
+        setCORSHeaders(res);
+        res.status = 204; // No content
+    });
+
     // ─── Start Server ───────────────────────────────────────────────
+    std::cout << "Starting Algorithm Visualizer API..." << std::endl;
     std::cout << "===================================================\n";
     std::cout << "  Algorithm Visualizer - C++ Backend Engine\n";
     std::cout << "===================================================\n";

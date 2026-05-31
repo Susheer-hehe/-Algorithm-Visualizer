@@ -1,153 +1,113 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { generateInsertionSortHistory, generateRandomArray, ACTION_TYPES } from '../engine/insertionSortEngine';
+import { generateRandomArray } from '../utils/arrayUtils';
 import ArrayBar from '../components/ArrayBar';
 import Controls from '../components/Controls';
 import Legend from '../components/Legend';
 import InsertionStepInfo from '../components/InsertionStepInfo';
 
+export const ACTION_TYPES = {
+  COMPARE: 'COMPARE',
+  SWAP: 'SWAP',
+  SHIFT: 'SHIFT',
+  INSERT: 'INSERT',
+  LOCKED: 'LOCKED',
+};
+
 export default function InsertionSortVisualizer() {
   const [arraySize, setArraySize] = useState(30);
-  const [speed, setSpeed] = useState(100);
-  const [originalArray, setOriginalArray] = useState(() => generateRandomArray(30));
-  const [history, setHistory] = useState([]);
+  const [speed, setSpeed]         = useState(100);
+  const [sourceArray, setSourceArray] = useState(() => generateRandomArray(30));
+  const [history, setHistory]     = useState([]);
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isSorting, setIsSorting] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
-  const [lockedIndices, setLockedIndices] = useState(new Set());
-
   const timerRef = useRef(null);
 
-  const handleShuffle = useCallback(() => {
-    setIsPlaying(false);
-    setIsSorting(false);
-    setIsComplete(false);
-    setCurrentStep(0);
-    setLockedIndices(new Set());
-    const newArr = generateRandomArray(arraySize);
-    setOriginalArray(newArr);
-    setHistory([]);
-  }, [arraySize]);
+  // ── Derived state ───────────────────────────────────────────────
+  const isSorting  = history.length > 0 && currentStep > 0;
+  const isComplete = history.length > 0 && currentStep >= history.length;
 
-  const handleArraySizeChange = useCallback((newSize) => {
-    setArraySize(newSize);
+  const lockedIndices = useMemo(() => {
+    const locked = new Set();
+    for (let i = 0; i < currentStep; i++) {
+      if (history[i]?.action === ACTION_TYPES.LOCKED)
+        history[i].indices.forEach(idx => locked.add(idx));
+    }
+    return locked;
+  }, [history, currentStep]);
+
+  // ── Reset helper ────────────────────────────────────────────────
+  const resetState = useCallback((newArr) => {
+    clearTimeout(timerRef.current);
     setIsPlaying(false);
-    setIsSorting(false);
-    setIsComplete(false);
     setCurrentStep(0);
-    setLockedIndices(new Set());
-    const newArr = generateRandomArray(newSize);
-    setOriginalArray(newArr);
     setHistory([]);
+    setSourceArray(newArr);
   }, []);
 
-  // Fetch from C++ backend, fallback to JS engine
-  const ensureHistory = useCallback(async () => {
-    if (history.length === 0) {
-      let h;
-      try {
-        const response = await fetch('http://localhost:8080/api/sort', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ array: originalArray, algorithm: 'insertion' }),
-        });
-        const data = await response.json();
-        h = data.history;
-        console.log(`[C++ Backend] Insertion Sort: ${h.length} steps`);
-      } catch (err) {
-        console.warn('[Fallback] Using JS engine:', err.message);
-        const result = generateInsertionSortHistory(originalArray);
-        h = result.history;
-      }
-      setHistory(h);
-      setIsSorting(true);
-      return h;
-    }
-    return history;
-  }, [history, originalArray]);
+  const handleShuffle         = useCallback(() => resetState(generateRandomArray(arraySize)), [arraySize, resetState]);
+  const handleArraySizeChange = useCallback((n) => { setArraySize(n); resetState(generateRandomArray(n)); }, [resetState]);
 
+  // ── History fetch (C++ Backend ONLY) ─────────────────────────────
+  const ensureHistory = useCallback(async () => {
+    if (history.length > 0) return history;
+    try {
+      const res  = await fetch('http://localhost:8080/api/sort', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ array: sourceArray, algorithm: 'insertion' }),
+      });
+      const data = await res.json();
+      if (!data.history) throw new Error("No history returned from backend");
+      setHistory(data.history);
+      return data.history;
+    } catch (err) {
+      alert("Error connecting to C++ backend. Please ensure the server is running.");
+      console.error(err);
+      setIsPlaying(false);
+      return [];
+    }
+  }, [history, sourceArray]);
+
+  // ── Playback ──────────────────────────────────────────────────────
   const stepForward = useCallback(async () => {
     const h = await ensureHistory();
-    setCurrentStep((prev) => {
-      const next = Math.min(prev + 1, h.length);
-      if (next >= h.length) {
-        setIsPlaying(false);
-        setIsComplete(true);
-        setIsSorting(false);
-      }
-      if (next > 0 && next <= h.length) {
-        const step = h[next - 1];
-        if (step.action === ACTION_TYPES.LOCKED) {
-          setLockedIndices((prevSet) => new Set([...prevSet, ...step.indices]));
-        }
-      }
-      return next;
-    });
+    setCurrentStep(prev => Math.min(prev + 1, h.length));
   }, [ensureHistory]);
 
   const stepBack = useCallback(() => {
-    setCurrentStep((prev) => {
-      const next = Math.max(prev - 1, 0);
-      if (history.length > 0) {
-        const newLocked = new Set();
-        for (let i = 0; i < next; i++) {
-          if (history[i].action === ACTION_TYPES.LOCKED) {
-            history[i].indices.forEach((idx) => newLocked.add(idx));
-          }
-        }
-        setLockedIndices(newLocked);
-      }
-      if (next === 0) {
-        setIsSorting(false);
-        setIsComplete(false);
-      }
-      return next;
-    });
-  }, [history]);
-
-  const handleReset = useCallback(() => {
     setIsPlaying(false);
-    setCurrentStep(0);
-    setIsSorting(false);
-    setIsComplete(false);
-    setLockedIndices(new Set());
+    setCurrentStep(prev => Math.max(prev - 1, 0));
   }, []);
 
+  const handleReset     = useCallback(() => { setIsPlaying(false); setCurrentStep(0); }, []);
   const handlePlayPause = useCallback(async () => {
     if (isComplete) return;
     await ensureHistory();
-    setIsSorting(true);
-    setIsPlaying((prev) => !prev);
+    setIsPlaying(p => !p);
   }, [isComplete, ensureHistory]);
 
   useEffect(() => {
-    if (isPlaying) {
-      timerRef.current = setTimeout(() => {
-        stepForward();
-      }, speed);
-    }
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [isPlaying, currentStep, speed, stepForward]);
+    if (!isPlaying || isComplete) { setIsPlaying(false); return; }
+    timerRef.current = setTimeout(stepForward, speed);
+    return () => clearTimeout(timerRef.current);
+  }, [isPlaying, currentStep, speed, isComplete, stepForward]);
 
-  const currentStepData = currentStep > 0 && currentStep <= history.length ? history[currentStep - 1] : null;
-  const displayArray = currentStepData ? currentStepData.array : originalArray;
-  const maxValue = Math.max(...displayArray);
+  // ── Render helpers ────────────────────────────────────────────────
+  const currentStepData = history[currentStep - 1] ?? null;
+  const displayArray    = currentStepData?.array ?? sourceArray;
+  const maxValue        = Math.max(...displayArray);
 
   const getBarState = (index) => {
-    if (lockedIndices.has(index)) return 'locked';
-    if (!currentStepData) return 'default';
-    if (currentStepData.indices.includes(index)) {
-      if (currentStepData.action === ACTION_TYPES.COMPARE) return 'compare';
-      if (currentStepData.action === ACTION_TYPES.SWAP) return 'swap';
-      if (currentStepData.action === ACTION_TYPES.SHIFT) return 'swap';
-      if (currentStepData.action === ACTION_TYPES.INSERT) return 'insert';
-      if (currentStepData.action === ACTION_TYPES.LOCKED) return 'locked';
-    }
-    return 'default';
+    if (lockedIndices.has(index))                  return 'locked';
+    if (!currentStepData)                          return 'default';
+    if (!currentStepData.indices.includes(index))  return 'default';
+    return currentStepData.action === ACTION_TYPES.COMPARE ? 'compare'
+         : currentStepData.action === ACTION_TYPES.SWAP    ? 'swap'
+         : currentStepData.action === ACTION_TYPES.SHIFT   ? 'swap'
+         : currentStepData.action === ACTION_TYPES.INSERT  ? 'insert'
+         : 'locked';
   };
 
   return (

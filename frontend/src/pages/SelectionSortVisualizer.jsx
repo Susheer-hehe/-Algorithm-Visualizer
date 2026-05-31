@@ -5,7 +5,7 @@ import { generateRandomArray } from '../utils/arrayUtils';
 import ArrayBar from '../components/ArrayBar';
 import Controls from '../components/Controls';
 import Legend from '../components/Legend';
-import StepInfo from '../components/StepInfo';
+import SelectionStepInfo from '../components/SelectionStepInfo';
 
 export const ACTION_TYPES = {
   COMPARE: 'COMPARE',
@@ -13,19 +13,23 @@ export const ACTION_TYPES = {
   LOCKED: 'LOCKED',
 };
 
-export default function BubbleSortVisualizer() {
+export default function SelectionSortVisualizer() {
+  // ── State Management ─────────────────────────────────────────────
   const [arraySize, setArraySize] = useState(30);
   const [speed, setSpeed]         = useState(100);
   const [sourceArray, setSourceArray] = useState(() => generateRandomArray(30));
+  
+  // Stores the step-by-step history fetched from backend or fallback JS engine
   const [history, setHistory]     = useState([]);
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const timerRef = useRef(null);
 
-  // ── Derived state — no useState needed ──────────────────────────
+  // ── Derived state — computed automatically based on history and currentStep
   const isSorting  = history.length > 0 && currentStep > 0;
   const isComplete = history.length > 0 && currentStep >= history.length;
 
+  // Calculates which indices are fully sorted (locked) up to the current step
   const lockedIndices = useMemo(() => {
     const locked = new Set();
     for (let i = 0; i < currentStep; i++) {
@@ -35,7 +39,7 @@ export default function BubbleSortVisualizer() {
     return locked;
   }, [history, currentStep]);
 
-  // ── Reset helper — used by shuffle + size change ─────────────────
+  // ── Helper to reset state when generating a new array ───────────
   const resetState = useCallback((newArr) => {
     clearTimeout(timerRef.current);
     setIsPlaying(false);
@@ -47,14 +51,14 @@ export default function BubbleSortVisualizer() {
   const handleShuffle         = useCallback(() => resetState(generateRandomArray(arraySize)), [arraySize, resetState]);
   const handleArraySizeChange = useCallback((n) => { setArraySize(n); resetState(generateRandomArray(n)); }, [resetState]);
 
-  // ── History fetch (C++ Backend ONLY) ─────────────────────────────
+  // ── Fetches history from C++ backend ONLY ───────────────────────
   const ensureHistory = useCallback(async () => {
     if (history.length > 0) return history;
     try {
       const res  = await fetch('http://localhost:8080/api/sort', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ array: sourceArray, algorithm: 'bubble' }),
+        body:    JSON.stringify({ array: sourceArray, algorithm: 'selection' }),
       });
       const data = await res.json();
       if (!data.history) throw new Error("No history returned from backend");
@@ -68,7 +72,7 @@ export default function BubbleSortVisualizer() {
     }
   }, [history, sourceArray]);
 
-  // ── Playback ──────────────────────────────────────────────────────
+  // ── Playback Controls ────────────────────────────────────────────
   const stepForward = useCallback(async () => {
     const h = await ensureHistory();
     setCurrentStep(prev => Math.min(prev + 1, h.length));
@@ -86,17 +90,19 @@ export default function BubbleSortVisualizer() {
     setIsPlaying(p => !p);
   }, [isComplete, ensureHistory]);
 
+  // Main playback loop
   useEffect(() => {
     if (!isPlaying || isComplete) { setIsPlaying(false); return; }
     timerRef.current = setTimeout(stepForward, speed);
     return () => clearTimeout(timerRef.current);
   }, [isPlaying, currentStep, speed, isComplete, stepForward]);
 
-  // ── Render helpers ────────────────────────────────────────────────
+  // ── Render Helpers ────────────────────────────────────────────────
   const currentStepData = history[currentStep - 1] ?? null;
   const displayArray    = currentStepData?.array ?? sourceArray;
   const maxValue        = Math.max(...displayArray);
 
+  // Determines color of the bar (default, compare, swap, locked)
   const getBarState = (index) => {
     if (lockedIndices.has(index))                  return 'locked';
     if (!currentStepData)                          return 'default';
@@ -108,11 +114,11 @@ export default function BubbleSortVisualizer() {
 
   return (
     <div className="min-h-screen bg-[#0a0a14] text-white flex flex-col">
-      {/* Background orbs */}
+      {/* Background orbs (Cyan/Blue for Selection Sort) */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute top-1/3 -right-20 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl animate-pulse-slow animation-delay-2000" />
-        <div className="absolute -bottom-20 left-1/3 w-72 h-72 bg-pink-600/8 rounded-full blur-3xl animate-pulse-slow animation-delay-4000" />
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute top-1/3 -right-20 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl animate-pulse-slow animation-delay-2000" />
+        <div className="absolute -bottom-20 left-1/3 w-72 h-72 bg-sky-600/8 rounded-full blur-3xl animate-pulse-slow animation-delay-4000" />
       </div>
 
       {/* Header */}
@@ -133,8 +139,8 @@ export default function BubbleSortVisualizer() {
           </Link>
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl font-bold">
-              <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                Bubble Sort
+              <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-sky-400 bg-clip-text text-transparent">
+                Selection Sort
               </span>
               <span className="text-slate-500 font-light ml-3">Visualizer</span>
             </h1>
@@ -148,7 +154,7 @@ export default function BubbleSortVisualizer() {
       {/* Main Content */}
       <main className="relative z-10 flex-1 flex flex-col items-center px-4 md:px-8 pb-8 gap-6 max-w-7xl mx-auto w-full">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-          <Legend />
+          <Legend variant="bubble" />
         </motion.div>
 
         {/* Visualization Area */}
@@ -179,7 +185,7 @@ export default function BubbleSortVisualizer() {
 
         {/* Step Info */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="w-full max-w-2xl">
-          <StepInfo step={currentStepData} />
+          <SelectionStepInfo step={currentStepData} />
         </motion.div>
 
         {/* Controls */}

@@ -34,7 +34,7 @@ const sortingAlgorithms = [
     color: 'from-cyan-500 to-blue-600',
     glow: 'group-hover:shadow-cyan-500/30',
     icon: '🎯',
-    ready: false,
+    ready: true,
   },
   {
     name: 'Quick Sort',
@@ -59,7 +59,7 @@ const pathfindingAlgorithms = [
     color: 'from-cyan-500 to-blue-600',
     glow: 'group-hover:shadow-cyan-500/30',
     icon: '🌊',
-    ready: false,
+    ready: true,
   },
   {
     name: 'DFS',
@@ -69,8 +69,8 @@ const pathfindingAlgorithms = [
     description: 'Depth-First Search goes as deep as possible along each branch before backtracking. Uses a stack.',
     color: 'from-violet-500 to-purple-700',
     glow: 'group-hover:shadow-violet-500/30',
-    icon: '🔍',
-    ready: false,
+    icon: '🧭',
+    ready: true,
   },
   {
     name: "Dijkstra's",

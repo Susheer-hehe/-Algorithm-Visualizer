@@ -10,6 +10,7 @@
 #include "include/httplib.h"
 #include "include/json.hpp"
 #include "sorting/bubble_sort.h"
+#include "sorting/insertion_sort.h"
 #include <iostream>
 #include <string>
 
@@ -65,8 +66,9 @@ int main() {
 
             if (algorithm == "bubble") {
                 bubbleSort(arr, size, history);
+            } else if (algorithm == "insertion") {
+                insertionSort(arr, size, history);
             } else {
-                // Future: selectionSort, quickSort, etc.
                 res.status = 400;
                 res.set_content("{\"error\":\"Unknown algorithm: " + algorithm + "\"}", "application/json");
                 delete[] arr;

@@ -1,13 +1,28 @@
 import { motion } from 'framer-motion';
 
-const items = [
+const bubbleSortItems = [
   { label: 'Default', gradient: 'from-indigo-500 to-purple-500', glow: 'shadow-indigo-500/30' },
   { label: 'Comparing', gradient: 'from-amber-400 to-orange-500', glow: 'shadow-amber-500/30' },
   { label: 'Swapping', gradient: 'from-rose-500 to-pink-600', glow: 'shadow-rose-500/30' },
   { label: 'Sorted', gradient: 'from-emerald-400 to-teal-500', glow: 'shadow-emerald-500/30' },
 ];
 
-export default function Legend() {
+const insertionSortItems = [
+  { label: 'Default', gradient: 'from-indigo-500 to-purple-500', glow: 'shadow-indigo-500/30' },
+  { label: 'Comparing', gradient: 'from-amber-400 to-orange-500', glow: 'shadow-amber-500/30' },
+  { label: 'Shifting', gradient: 'from-rose-500 to-pink-600', glow: 'shadow-rose-500/30' },
+  { label: 'Inserting', gradient: 'from-cyan-400 to-blue-500', glow: 'shadow-cyan-500/30' },
+  { label: 'Sorted', gradient: 'from-emerald-400 to-teal-500', glow: 'shadow-emerald-500/30' },
+];
+
+const variantMap = {
+  bubble: bubbleSortItems,
+  insertion: insertionSortItems,
+};
+
+export default function Legend({ variant = 'bubble' }) {
+  const items = variantMap[variant] || bubbleSortItems;
+
   return (
     <div className="flex flex-wrap items-center justify-center gap-4">
       {items.map((item, i) => (

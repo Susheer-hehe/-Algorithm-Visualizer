@@ -5,6 +5,7 @@ const BAR_COLORS = {
   compare: 'from-amber-400 to-orange-500',
   swap: 'from-rose-500 to-pink-600',
   locked: 'from-emerald-400 to-teal-500',
+  insert: 'from-cyan-400 to-blue-500',
 };
 
 const BAR_SHADOWS = {
@@ -12,6 +13,7 @@ const BAR_SHADOWS = {
   compare: '0 0 25px rgba(251, 191, 36, 0.5)',
   swap: '0 0 25px rgba(244, 63, 94, 0.5)',
   locked: '0 0 20px rgba(52, 211, 153, 0.4)',
+  insert: '0 0 25px rgba(34, 211, 238, 0.5)',
 };
 
 export default function ArrayBar({ value, maxValue, state = 'default', totalBars }) {

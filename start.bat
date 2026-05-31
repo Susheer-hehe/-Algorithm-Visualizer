@@ -7,13 +7,11 @@ echo.
 :: Compile the C++ backend if needed
 echo [1/3] Compiling C++ backend...
 cd /d "%~dp0backend"
-if not exist server.exe (
-    g++ -std=c++17 -O2 -o server.exe main.cpp -lws2_32 -lwsock32
-    if errorlevel 1 (
-        echo ERROR: Compilation failed!
-        pause
-        exit /b 1
-    )
+g++ -std=c++17 -O2 -o server.exe main.cpp -lws2_32 -lwsock32
+if errorlevel 1 (
+    echo ERROR: Compilation failed!
+    pause
+    exit /b 1
 )
 echo       Done!
 echo.

@@ -1,6 +1,7 @@
 #ifndef BFS_H
 #define BFS_H
 
+#include <iostream>
 #include "Graph.h"
 
 // ─── Adjacency List BFS ───────────────────────────────────────────────
@@ -43,8 +44,48 @@ inline void runBFS(int rows, int cols, int startR, int startC, int endR, int end
     int startNode = startR * cols + startC;
     int endNode = endR * cols + endC;
     
-    // Run BFS traversal using the adjacency list
-    g.BFS(startNode, endNode, cols, history);
+    // Run BFS traversal
+    int numVertices = g.getNumVertices();
+    Node** adj = g.getAdj();
+    
+    bool* visited = new bool[numVertices];
+    int*  parent  = new int[numVertices];
+    for (int i = 0; i < numVertices; i++) {
+        visited[i] = false;
+        parent[i]  = -1;
+    }
+
+    CustomQueue q(numVertices);          // exact safe size
+    visited[startNode] = true;
+    q.push(startNode);
+    history.addStep(ENQUEUE, startNode / cols, startNode % cols);
+
+    bool found = false;
+    while (!q.isEmpty() && !found) {
+        int node = q.pop();
+        history.addStep(VISIT, node / cols, node % cols);
+
+        if (node == endNode) { found = true; break; }
+
+        Node* temp = adj[node];
+        while (temp) {
+            int neigh = temp->data;
+            if (!visited[neigh]) {
+                visited[neigh] = true;
+                parent[neigh]  = node;
+                q.push(neigh);
+                history.addStep(ENQUEUE, neigh / cols, neigh % cols);
+            }
+            temp = temp->next;
+        }
+    }
+
+    if (found) {
+        emitPath(parent, startNode, endNode, cols, numVertices, history);
+    }
+
+    delete[] visited;
+    delete[] parent;
 }
 
 #endif

@@ -1,10 +1,10 @@
 // ═══════════════════════════════════════════════════════════════════
 //  Algorithm Visualizer — C++ Backend Engine
 //  
-//  This server receives an unsorted array from the React frontend,
-//  runs Bubble Sort using raw int* arrays (NO std::vector),
-//  logs every step (COMPARE, SWAP, LOCKED) into a custom history,
-//  and returns the full history as JSON.
+//  This server receives requests from the React frontend, processes
+//  them using completely custom data structures (NO standard library 
+//  containers like std::vector or std::queue for core logic), and 
+//  returns an exact step-by-step history payload for visualization.
 // ═══════════════════════════════════════════════════════════════════
 
 #include "include/httplib.h"
@@ -14,6 +14,8 @@
 #include "sorting/selection_sort.h"
 #include "pathfinding/bfs.h"
 #include "pathfinding/dfs.h"
+#include "pathfinding/dijkstra.h"
+#include "pathfinding/dijkstra_graph.h"
 #include <iostream>
 #include <string>
 
@@ -31,7 +33,7 @@ int main() {
     httplib::Server svr;
 
     // ─── POST /api/sort ─────────────────────────────────────────────
-    // Receives: { "array": [5, 3, 8, 1, ...], "algorithm": "bubble" }
+    // Receives: { "array": [5, 3, 8, 1, ...], "algorithm": "bubble" | "selection" | "insertion" }
     // Returns:  { "history": [ { action, indices, array }, ... ] }
     svr.Post("/api/sort", [](const httplib::Request& req, httplib::Response& res) {
         setCORSHeaders(res);
@@ -124,11 +126,46 @@ int main() {
     });
 
     // ─── POST /api/pathfind ──────────────────────────────────────────────
+    // Handles all Pathfinding algorithms.
+    // Supports two distinct data formats based on the requested algorithm:
+    // 1. Explicit Graph (dijkstra_graph): numNodes, startNode, endNode, edges array
+    // 2. 2D Grid Matrix (bfs, dfs, dijkstra): gridRows, gridCols, start, end, walls array
     svr.Post("/api/pathfind", [](const httplib::Request& req, httplib::Response& res) {
         setCORSHeaders(res);
         try {
             auto requestBody = json::parse(req.body);
             std::string algorithm = requestBody.value("algorithm", "bfs");
+            
+            // ─── Format 1: Node-and-Edge Graph (Dijkstra) ───
+            // Payload: { "algorithm": "dijkstra_graph", "numNodes": 6, "edges": [{"u":0, "v":1, "weight":4}] }
+            if (algorithm == "dijkstra_graph") {
+                int numNodes = requestBody.value("numNodes", 0);
+                int startNode = requestBody.value("startNode", 0);
+                int endNode = requestBody.value("endNode", 0);
+                auto edgesArray = requestBody["edges"];
+                int numEdges = static_cast<int>(edgesArray.size());
+                GraphEdge* edges = new GraphEdge[numEdges];
+                
+                for (int i = 0; i < numEdges; i++) {
+                    edges[i].u = edgesArray[i]["u"].get<int>();
+                    edges[i].v = edgesArray[i]["v"].get<int>();
+                    edges[i].weight = edgesArray[i]["weight"].get<int>();
+                }
+                
+                PathfindingHistory history;
+                runDijkstraGraph(numNodes, startNode, endNode, edges, numEdges, history);
+                
+                std::string jsonStr = history.toJSON();
+                std::string responseBody = "{\"history\":" + jsonStr + "}";
+                std::cout << "[POST /api/pathfind] dijkstra_graph -> " << numNodes << " nodes, " << numEdges << " edges. steps=" << history.count << std::endl;
+                res.set_content(responseBody, "application/json");
+                
+                delete[] edges;
+                return;
+            }
+
+            // ─── Format 2: 2D Grid Pathfinding (BFS, DFS, Dijkstra) ───
+            // Payload: { "algorithm": "bfs" | "dfs" | "dijkstra", "gridRows": 20, "gridCols": 40, "start": { "r": 9, "c": 8 }, "end": { "r": 9, "c": 31 }, "walls": [0,1,0...] }
             int rows = requestBody.value("gridRows", 20);
             int cols = requestBody.value("gridCols", 40);
             
@@ -154,6 +191,8 @@ int main() {
                 runBFS(rows, cols, startR, startC, endR, endC, grid, history);
             } else if (algorithm == "dfs") {
                 runDFS(rows, cols, startR, startC, endR, endC, grid, history);
+            } else if (algorithm == "dijkstra") {
+                runDijkstra(rows, cols, startR, startC, endR, endC, grid, history);
             } else {
                 res.status = 400;
                 res.set_content("{\"error\":\"Unknown algorithm: " + algorithm + "\"}", "application/json");
@@ -191,7 +230,8 @@ int main() {
     std::cout << "  Algorithm Visualizer - C++ Backend Engine\n";
     std::cout << "===================================================\n";
     std::cout << "  Server:    http://localhost:8080\n";
-    std::cout << "  Endpoints: POST /api/sort\n";
+    std::cout << "  Endpoints: POST /api/sort      (Bubble, Insertion, Selection)\n";
+    std::cout << "             POST /api/pathfind  (BFS, DFS, Dijkstra)\n";
     std::cout << "             GET  /health\n";
     std::cout << "  Constraints: NO std::vector, raw int* arrays only\n";
     std::cout << "===================================================\n\n";

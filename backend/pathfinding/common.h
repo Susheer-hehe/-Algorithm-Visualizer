@@ -1,6 +1,7 @@
 #ifndef PATHFINDING_COMMON_H
 #define PATHFINDING_COMMON_H
 
+#include <iostream>
 #include <string>
 
 // Actions during pathfinding
@@ -79,5 +80,21 @@ struct PathfindingHistory {
     PathfindingHistory(const PathfindingHistory&) = delete;
     PathfindingHistory& operator=(const PathfindingHistory&) = delete;
 };
+
+// ─── Path Reconstruction Helper ──────────────────────────────────────────────
+inline void emitPath(int* parent, int start, int end, int cols, int numVertices, PathfindingHistory& history) {
+    int* path    = new int[numVertices];
+    int  pathLen = 0;
+    int  curr    = end;
+    while (curr != -1) {
+        path[pathLen++] = curr;
+        curr = parent[curr];
+    }
+    // Emit in reverse order (start -> end)
+    for (int i = pathLen - 1; i >= 0; i--) {
+        history.addStep(PATH, path[i] / cols, path[i] % cols);
+    }
+    delete[] path;
+}
 
 #endif

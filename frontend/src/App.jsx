@@ -1,26 +1,23 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import HomePage from './pages/HomePage';
-import BubbleSortVisualizer from './pages/BubbleSortVisualizer';
-import InsertionSortVisualizer from './pages/InsertionSortVisualizer';
-import SelectionSortVisualizer from './pages/SelectionSortVisualizer';
-import BfsVisualizer from './pages/BfsVisualizer';
-import DfsVisualizer from './pages/DfsVisualizer';
-import AboutPage from './pages/AboutPage';
+import SortVisualizer from './components/SortVisualizer';
+import PathVisualizer from './components/PathVisualizer';
+import DijkstraVisualizer from './pages/DijkstraVisualizer';
+import HomePage       from './pages/HomePage';
+import AboutPage      from './pages/AboutPage';
 
-function App() {
+export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/bubble-sort" element={<BubbleSortVisualizer />} />
-        <Route path="/insertion-sort" element={<InsertionSortVisualizer />} />
-        <Route path="/selection-sort" element={<SelectionSortVisualizer />} />
-        <Route path="/bfs" element={<BfsVisualizer />} />
-        <Route path="/dfs" element={<DfsVisualizer />} />
-        <Route path="/about" element={<AboutPage />} />
+        <Route path="/"               element={<HomePage />} />
+        <Route path="/about"          element={<AboutPage />} />
+        <Route path="/bubble-sort"    element={<SortVisualizer algorithm="bubble" />} />
+        <Route path="/selection-sort" element={<SortVisualizer algorithm="selection" />} />
+        <Route path="/insertion-sort" element={<SortVisualizer algorithm="insertion" />} />
+        <Route path="/bfs"            element={<PathVisualizer algorithm="bfs" />} />
+        <Route path="/dfs"            element={<PathVisualizer algorithm="dfs" />} />
+        <Route path="/dijkstra"       element={<DijkstraVisualizer />} />
       </Routes>
     </Router>
   );
 }
-
-export default App;

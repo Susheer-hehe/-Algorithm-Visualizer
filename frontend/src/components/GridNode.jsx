@@ -14,7 +14,9 @@ const GridNode = memo(({ row, col, status, onMouseDown, onMouseEnter, onMouseUp 
     bg = 'bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.5)] border-rose-400 z-10';
     isNode = true;
   } else if (status === 'wall') {
-    bg = 'bg-slate-700 border-slate-600 scale-95 rounded-sm';
+    bg = 'bg-slate-700/80 border-slate-600 scale-95 shadow-inner';
+  } else if (status === 'weight') {
+    bg = 'bg-amber-800/80 border-amber-700 scale-95 shadow-inner';
   } else if (status === 'visited') {
     bg = 'bg-cyan-500/40 border-cyan-400/50 animate-pulse-fast';
   } else if (status === 'queued') {

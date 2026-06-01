@@ -75,13 +75,13 @@ const pathfindingAlgorithms = [
   {
     name: "Dijkstra's",
     path: '/dijkstra',
-    complexity: 'O(V² / V+E log V)',
+    complexity: 'O(V + E log V)',
     space: 'O(V)',
-    description: "Finds the shortest path from a source to all other nodes in a weighted graph. Uses a priority queue.",
-    color: 'from-emerald-500 to-teal-600',
-    glow: 'group-hover:shadow-emerald-500/30',
+    description: "The father of pathfinding. Explores paths favoring lower costs, ensuring the shortest path on weighted graphs.",
+    color: 'from-amber-400 to-orange-600',
+    glow: 'group-hover:shadow-amber-500/30',
     icon: '🗺️',
-    ready: false,
+    ready: true,
   },
 ];
 

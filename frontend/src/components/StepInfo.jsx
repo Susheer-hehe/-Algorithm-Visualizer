@@ -1,62 +1,75 @@
 import { motion, AnimatePresence } from 'framer-motion';
 
-const actionConfig = {
+// Action → display config. Covers every action all three sort algorithms emit.
+const CONFIG = {
   COMPARE: {
-    label: 'COMPARE',
-    color: 'text-amber-400',
+    label: 'COMPARE', icon: '⟷', colour: 'text-amber-400',
     bg: 'bg-amber-500/10 border-amber-500/20',
-    icon: '⟷',
-    describe: (indices, array) =>
-      `Comparing arr[${indices[0]}] = ${array[indices[0]]} with arr[${indices[1]}] = ${array[indices[1]]}`,
+    describe: (idx, arr) =>
+      `Comparing arr[${idx[0]}] = ${arr[idx[0]]} with arr[${idx[1]}] = ${arr[idx[1]]}`,
   },
   SWAP: {
-    label: 'SWAP',
-    color: 'text-rose-400',
+    label: 'SWAP', icon: '⇄', colour: 'text-rose-400',
     bg: 'bg-rose-500/10 border-rose-500/20',
-    icon: '⇄',
-    describe: (indices, array) =>
-      `Swapped arr[${indices[0]}] = ${array[indices[0]]} and arr[${indices[1]}] = ${array[indices[1]]}`,
+    describe: (idx, arr) =>
+      `Swapping arr[${idx[0]}] = ${arr[idx[0]]} and arr[${idx[1]}] = ${arr[idx[1]]}`,
   },
   LOCKED: {
-    label: 'LOCKED',
-    color: 'text-emerald-400',
+    label: 'LOCKED', icon: '✓', colour: 'text-emerald-400',
     bg: 'bg-emerald-500/10 border-emerald-500/20',
-    icon: '✓',
-    describe: (indices, array) =>
-      `Element arr[${indices[0]}] = ${array[indices[0]]} is now in its final position`,
+    describe: (idx, arr) =>
+      `Element arr[${idx[0]}] = ${arr[idx[0]]} is now in its final sorted position.`,
   },
+  SHIFT: {
+    label: 'SHIFT', icon: '→', colour: 'text-rose-400',
+    bg: 'bg-rose-500/10 border-rose-500/20',
+    describe: (idx, arr) =>
+      `Shifting element ${arr[idx[1]]} one position to the right.`,
+  },
+  INSERT: {
+    label: 'INSERT', icon: '↓', colour: 'text-amber-400',
+    bg: 'bg-amber-500/10 border-amber-500/20',
+    describe: (idx, arr) =>
+      `Inserting key ${arr[idx[0]]} into its correct sorted position.`,
+  }
 };
 
 export default function StepInfo({ step }) {
   if (!step) {
     return (
-      <div className="h-16 flex items-center justify-center text-slate-500 text-sm font-mono">
-        Press Play or Step Forward to begin
+      <div className="h-16 flex items-center justify-center text-slate-500 font-mono text-sm border border-dashed border-white/[0.05] rounded-xl bg-white/[0.01]">
+        Waiting to start...
       </div>
     );
   }
 
-  const config = actionConfig[step.action];
-  if (!config) return null;
+  const { action, indices, array } = step;
+  const cfg = CONFIG[action] || {
+    label: action, icon: '•', colour: 'text-slate-400',
+    bg: 'bg-slate-500/10 border-slate-500/20',
+    describe: () => 'Unknown action.',
+  };
 
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        key={`${step.action}-${step.indices.join('-')}-${Math.random()}`}
-        initial={{ opacity: 0, y: -8 }}
+        key={`${action}-${indices.join('-')}-${array.join('-')}`}
+        initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 8 }}
+        exit={{ opacity: 0, y: -5 }}
         transition={{ duration: 0.15 }}
-        className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${config.bg}`}
+        className={`flex items-center gap-4 p-4 rounded-xl border ${cfg.bg}`}
       >
-        <span className="text-xl">{config.icon}</span>
-        <div className="flex flex-col">
-          <span className={`text-xs font-bold uppercase tracking-widest ${config.color}`}>
-            {config.label}
-          </span>
-          <span className="text-sm text-slate-300 font-mono">
-            {config.describe(step.indices, step.array)}
-          </span>
+        <div className={`flex items-center justify-center w-10 h-10 rounded-lg bg-white/5 font-bold text-lg ${cfg.colour}`}>
+          {cfg.icon}
+        </div>
+        <div className="flex-1">
+          <div className={`text-xs font-bold tracking-widest uppercase mb-1 ${cfg.colour}`}>
+            {cfg.label}
+          </div>
+          <div className="text-sm text-slate-300 font-mono">
+            {cfg.describe(indices, array)}
+          </div>
         </div>
       </motion.div>
     </AnimatePresence>

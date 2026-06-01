@@ -1,6 +1,7 @@
 #ifndef BUBBLE_SORT_H
 #define BUBBLE_SORT_H
 
+#include <iostream>
 #include "common.h"
 
 // ─── Bubble Sort ──────────────────────────────────────────────────────

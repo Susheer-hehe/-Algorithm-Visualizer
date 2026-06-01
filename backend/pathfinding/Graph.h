@@ -2,6 +2,7 @@
 #define GRAPH_H
 
 #include "common.h"
+#include "PriorityQueue.h"
 #include <iostream>
 
 // Array-based queue moved directly into Graph.h to fix IntelliSense issues
@@ -79,6 +80,7 @@ public:
 
 struct Node {
     int data;
+    int weight;
     Node* next;
 };
 
@@ -109,116 +111,14 @@ public:
         delete[] adj;
     }
     
-    // addEdge implementation exactly matching the screenshot style
-    void addEdge(int u, int v) {
-        // We only add one direction here (we'll call it twice in bfs.h for undirected)
-        Node* newNode = new Node{v, adj[u]};
+    // addEdge implementation exactly matching the screenshot style, but extended for weights
+    void addEdge(int u, int v, int weight = 1) {
+        Node* newNode = new Node{v, weight, adj[u]};
         adj[u] = newNode;
     }
     
-    // BFS traversal matching the user's provided logic
-    void BFS(int start, int end, int cols, PathfindingHistory& history) {
-        bool* visited = new bool[numVertices];
-        int*  parent  = new int[numVertices];
-        for (int i = 0; i < numVertices; i++) {
-            visited[i] = false;
-            parent[i]  = -1;
-        }
-
-        CustomQueue q(numVertices);          // exact safe size
-        visited[start] = true;
-        q.push(start);
-        history.addStep(ENQUEUE, start / cols, start % cols);
-
-        bool found = false;
-        while (!q.isEmpty() && !found) {
-            int node = q.pop();
-            history.addStep(VISIT, node / cols, node % cols);
-
-            if (node == end) { found = true; break; }
-
-            Node* temp = adj[node];
-            while (temp) {
-                int neigh = temp->data;
-                if (!visited[neigh]) {
-                    visited[neigh] = true;
-                    parent[neigh]  = node;
-                    q.push(neigh);
-                    history.addStep(ENQUEUE, neigh / cols, neigh % cols);
-                }
-                temp = temp->next;
-            }
-        }
-
-        if (found) {
-            // Collect path then emit start -> end
-            int* path    = new int[numVertices];
-            int  pathLen = 0;
-            int  curr    = end;
-            while (curr != -1) {
-                path[pathLen++] = curr;
-                curr = parent[curr];
-            }
-            for (int i = pathLen - 1; i >= 0; i--)
-                history.addStep(PATH, path[i] / cols, path[i] % cols);
-            delete[] path;
-        }
-
-        delete[] visited;
-        delete[] parent;
-    }
-    
-    // DFS traversal matching the BFS structure
-    void DFS(int start, int end, int cols, PathfindingHistory& history) {
-        bool* visited = new bool[numVertices];
-        int*  parent  = new int[numVertices];
-        for (int i = 0; i < numVertices; i++) {
-            visited[i] = false;
-            parent[i]  = -1;
-        }
-
-        CustomStack s(numVertices);
-        visited[start] = true;
-        s.push(start);
-        history.addStep(ENQUEUE, start / cols, start % cols);
-
-        bool found = false;
-        while (!s.isEmpty() && !found) {
-            int node = s.pop();
-            history.addStep(VISIT, node / cols, node % cols);
-
-            if (node == end) { found = true; break; }
-
-            Node* temp = adj[node];
-            while (temp) {
-                int neigh = temp->data;
-                if (!visited[neigh]) {
-                    visited[neigh] = true;
-                    parent[neigh]  = node;
-                    s.push(neigh);
-                    history.addStep(ENQUEUE, neigh / cols, neigh % cols);
-                }
-                temp = temp->next;
-            }
-        }
-
-        if (found) {
-            // Collect path then emit start -> end
-            int* path    = new int[numVertices];
-            int  pathLen = 0;
-            int  curr    = end;
-            while (curr != -1) {
-                path[pathLen++] = curr;
-                curr = parent[curr];
-            }
-            for (int i = pathLen - 1; i >= 0; i--)
-                history.addStep(PATH, path[i] / cols, path[i] % cols);
-            delete[] path;
-        }
-
-        delete[] visited;
-        delete[] parent;
-    }
+    Node** getAdj() const { return adj; }
+    int getNumVertices() const { return numVertices; }
     
     // Prevent copying
     graph(const graph&) = delete;

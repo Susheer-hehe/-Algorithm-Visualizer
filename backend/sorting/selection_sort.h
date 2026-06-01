@@ -1,6 +1,7 @@
 #ifndef SELECTION_SORT_H
 #define SELECTION_SORT_H
 
+#include <iostream>
 #include "common.h"
 
 // ─── Selection Sort ───────────────────────────────────────────────────

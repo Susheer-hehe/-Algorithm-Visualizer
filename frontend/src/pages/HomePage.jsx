@@ -36,17 +36,6 @@ const sortingAlgorithms = [
     icon: '🎯',
     ready: true,
   },
-  {
-    name: 'Quick Sort',
-    path: '/quick-sort',
-    complexity: 'O(n log n)',
-    space: 'O(log n)',
-    description: 'Picks a pivot, partitions the array around it, and recursively sorts the sub-arrays. Fast in practice.',
-    color: 'from-rose-500 to-pink-600',
-    glow: 'group-hover:shadow-rose-500/30',
-    icon: '⚡',
-    ready: false,
-  },
 ];
 
 const pathfindingAlgorithms = [

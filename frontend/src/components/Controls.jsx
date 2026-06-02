@@ -38,7 +38,7 @@ export default function Controls({
   isPlaying, onPlayPause, onStepForward, onStepBack,
   onReset, onShuffle, speed, onSpeedChange,
   currentStep, totalSteps, isSorting, isComplete,
-  // Array-size slider is optional — pathfinding pages don't need it
+  // Array-size slider 
   arraySize, onArraySizeChange,
 }) {
   const progress = totalSteps > 0 ? (currentStep / totalSteps) * 100 : 0;

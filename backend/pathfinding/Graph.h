@@ -5,7 +5,7 @@
 #include "PriorityQueue.h"
 #include <iostream>
 
-// Array-based queue moved directly into Graph.h to fix IntelliSense issues
+
 class CustomQueue {
 private:
     int* arr;

@@ -1,60 +1,50 @@
 import { motion } from 'framer-motion';
 
 const BAR_COLORS = {
-  default: 'from-indigo-500 to-purple-500',
-  compare: 'from-amber-400 to-orange-500',
-  swap: 'from-rose-500 to-pink-600',
-  locked: 'from-emerald-400 to-teal-500',
-  insert: 'from-cyan-400 to-blue-500',
+  default: 'bg-gray-200',
+  compare: 'bg-blue-400',
+  swap: 'bg-purple-500',
+  locked: 'bg-emerald-400',
+  insert: 'bg-cyan-400',
 };
 
-const BAR_SHADOWS = {
-  default: '0 0 15px rgba(99, 102, 241, 0.3)',
-  compare: '0 0 25px rgba(251, 191, 36, 0.5)',
-  swap: '0 0 25px rgba(244, 63, 94, 0.5)',
-  locked: '0 0 20px rgba(52, 211, 153, 0.4)',
-  insert: '0 0 25px rgba(34, 211, 238, 0.5)',
-};
+const LABEL_HEIGHT = 20; // px — reserved at bottom for number labels
 
 export default function ArrayBar({ value, maxValue, state = 'default', totalBars }) {
   const heightPercent = (value / maxValue) * 100;
-  const gradient = BAR_COLORS[state] || BAR_COLORS.default;
-  const shadow = BAR_SHADOWS[state] || BAR_SHADOWS.default;
+  const colorClass = BAR_COLORS[state] || BAR_COLORS.default;
 
-  // Dynamic width based on number of bars
   const barWidth = Math.max(4, Math.min(48, Math.floor(800 / totalBars)));
-  const showLabel = barWidth >= 14;
+  const showLabel = barWidth >= 16;
 
   return (
     <div
-      className="flex flex-col items-center justify-end h-full"
-      style={{ width: `${barWidth}px`, minWidth: `${barWidth}px` }}
+      style={{ width: barWidth, minWidth: barWidth, height: '100%', display: 'flex', flexDirection: 'column' }}
     >
-      {/* Value label above the bar */}
-      {showLabel && (
-        <motion.span
-          className="text-[9px] font-mono text-slate-400 mb-1 select-none leading-none"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          key={value}
-        >
-          {value}
-        </motion.span>
-      )}
+      {/*
+        Bar area: takes all space EXCEPT the label row.
+        The bar's height% is relative to THIS div only,
+        so 100% bar height = top of bar area, never leaking into label space.
+      */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end' }}>
+        <motion.div
+          className={`w-full rounded-t-sm ${colorClass}`}
+          style={{ height: `${heightPercent}%`, minHeight: 2, width: '100%' }}
+          animate={{ height: `${heightPercent}%` }}
+          transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+        />
+      </div>
 
-      {/* The bar — height is calculated in pixels based on parent */}
-      <motion.div
-        className={`w-full rounded-t-sm bg-gradient-to-t ${gradient}`}
-        style={{
-          boxShadow: shadow,
-          height: `${heightPercent}%`,
-          minHeight: '2px',
-        }}
-        animate={{
-          height: `${heightPercent}%`,
-        }}
-        transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-      />
+      {/* Fixed label row — always occupies LABEL_HEIGHT px regardless of bar size */}
+      <div
+        style={{ height: LABEL_HEIGHT, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 2 }}
+      >
+        {showLabel && (
+          <span style={{ fontSize: 9, color: '#9ca3af', lineHeight: 1, userSelect: 'none' }}>
+            {value}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

@@ -4,25 +4,25 @@ import { memo } from 'react';
 // Grid node receives its status as a simple string.
 const GridNode = memo(({ row, col, status, onMouseDown, onMouseEnter, onMouseUp }) => {
   // Determine color based on status
-  let bg = 'bg-white/[0.03] border-white/[0.05]'; // default empty
+  let bg = 'bg-gray-50 border-gray-200'; // default empty
   let isNode = false;
 
   if (status === 'start') {
-    bg = 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)] border-emerald-400 z-10';
+    bg = 'bg-emerald-500 border-emerald-600 z-10';
     isNode = true;
   } else if (status === 'end') {
-    bg = 'bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.5)] border-rose-400 z-10';
+    bg = 'bg-rose-500 border-rose-600 z-10';
     isNode = true;
   } else if (status === 'wall') {
-    bg = 'bg-slate-700/80 border-slate-600 scale-95 shadow-inner';
+    bg = 'bg-gray-700 border-gray-800';
   } else if (status === 'weight') {
-    bg = 'bg-amber-800/80 border-amber-700 scale-95 shadow-inner';
+    bg = 'bg-amber-700 border-amber-800';
   } else if (status === 'visited') {
-    bg = 'bg-cyan-500/40 border-cyan-400/50 animate-pulse-fast';
+    bg = 'bg-blue-200 border-blue-300';
   } else if (status === 'queued') {
-    bg = 'bg-indigo-500/30 border-indigo-400/40';
+    bg = 'bg-blue-100 border-blue-200';
   } else if (status === 'path') {
-    bg = 'bg-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.6)] border-amber-300 z-10 scale-110 rounded-sm transition-transform';
+    bg = 'bg-yellow-400 border-yellow-500 z-10';
   }
 
   return (

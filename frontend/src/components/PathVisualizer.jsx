@@ -1,26 +1,44 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import useVisualizer from '../hooks/useVisualizer';
 import GridNode from './GridNode';
-import Controls from './Controls';
 
 const ROWS = 20;
 const COLS = 40;
 const START = { r: 9, c: 8  };
 const END   = { r: 9, c: 31 };
 
+const ALGO_CONFIG = {
+  bfs: {
+    label: 'Breadth-First Search (BFS)',
+    shortLabel: 'BFS',
+    description: 'Explores all neighbors at the current depth before moving deeper. Guarantees the shortest path in an unweighted grid.',
+    time: 'O(V + E)',
+    space: 'O(V)',
+    note: 'Shortest path guaranteed',
+    iconBg: 'bg-cyan-500',
+  },
+  dfs: {
+    label: 'Depth-First Search (DFS)',
+    shortLabel: 'DFS',
+    description: 'Goes as deep as possible along each branch before backtracking. Uses a stack internally. Does not guarantee shortest path.',
+    time: 'O(V + E)',
+    space: 'O(V)',
+    note: 'No shortest-path guarantee',
+    iconBg: 'bg-violet-500',
+  },
+};
+
 const runPathfind = async (algorithm, rows, cols, startR, startC, endR, endC, walls) => {
     const res = await fetch('/api/pathfind', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            algorithm, 
-            gridRows: rows, 
-            gridCols: cols, 
-            start: { r: startR, c: startC }, 
-            end: { r: endR, c: endC }, 
-            walls 
+        body: JSON.stringify({
+            algorithm,
+            gridRows: rows,
+            gridCols: cols,
+            start: { r: startR, c: startC },
+            end: { r: endR, c: endC },
+            walls
         }),
     });
     const data = await res.json();
@@ -28,32 +46,15 @@ const runPathfind = async (algorithm, rows, cols, startR, startC, endR, endC, wa
     return data;
 };
 
-const ALGO_CONFIG = {
-  bfs: {
-    label:    'Breadth-First Search',
-    gradient: 'from-cyan-400 via-teal-400 to-emerald-400',
-    orbs:     ['bg-cyan-600/10', 'bg-teal-600/10'],
-    note:     'Shortest path guaranteed  •  Unweighted graph',
-  },
-  dfs: {
-    label:    'Depth-First Search',
-    gradient: 'from-violet-400 via-fuchsia-400 to-pink-400',
-    orbs:     ['bg-violet-600/10', 'bg-purple-600/10'],
-    note:     'No shortest-path guarantee  •  Stack-based',
-  },
-};
-
 // algorithm: "bfs" | "dfs"
 export default function PathVisualizer({ algorithm }) {
   const cfg = ALGO_CONFIG[algorithm];
   const viz = useVisualizer();
 
-  // Flat wall array: 0 = open, 1 = wall
-  const [walls,          setWalls]          = useState(() => new Array(ROWS * COLS).fill(0));
+  const [walls, setWalls]                   = useState(() => new Array(ROWS * COLS).fill(0));
   const [isMousePressed, setIsMousePressed] = useState(false);
-  const paintModeRef = useRef(null); // "draw" | "erase" — set on mousedown, used on enter
+  const paintModeRef = useRef(null);
 
-  // ── Grid painting ────────────────────────────────────────────────────────────
   const toggleWall = useCallback((r, c, mode) => {
     if (r === START.r && c === START.c) return;
     if (r === END.r   && c === END.c)   return;
@@ -79,24 +80,18 @@ export default function PathVisualizer({ algorithm }) {
 
   const handleMouseUp = useCallback(() => setIsMousePressed(false), []);
 
-  // ── Reset helpers ─────────────────────────────────────────────────────────────
   const clearPath = useCallback(() => viz.load(null), [viz]);
-
   const clearAll  = useCallback(() => {
     viz.load(null);
     setWalls(new Array(ROWS * COLS).fill(0));
   }, [viz]);
 
-  // ── Playback ─────────────────────────────────────────────────────────────────
   const onPlayPause = useCallback(() => {
     viz.handlePlayPause(() =>
       runPathfind(algorithm, ROWS, COLS, START.r, START.c, END.r, END.c, walls)
     );
   }, [viz, algorithm, walls]);
 
-  // ── Node state computation ───────────────────────────────────────────────────
-  // Walk history up to currentStep and build a map of cell states.
-  // PATH beats VISIT beats ENQUEUE — later writes in the same cell win.
   const nodeStates = useMemo(() => {
     const map = new Map();
     for (let i = 0; i < viz.currentStep; i++) {
@@ -117,83 +112,157 @@ export default function PathVisualizer({ algorithm }) {
     return walls[r * COLS + c] === 1 ? 'wall' : 'empty';
   }, [nodeStates, walls]);
 
+  // Count visited and path nodes for stats
+  const stats = useMemo(() => {
+    let visited = 0, path = 0;
+    nodeStates.forEach(v => {
+      if (v === 'visited') visited++;
+      if (v === 'path') path++;
+    });
+    return { visited, path };
+  }, [nodeStates]);
+
   return (
-    <div className="min-h-screen bg-[#0a0a14] text-white flex flex-col"
+    <div className="flex flex-col font-sans" style={{ height: 'calc(100vh - 65px)' }}
          onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-      {/* Orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {cfg.orbs.map((c, i) => (
-          <div key={i} className={`absolute w-96 h-96 rounded-full blur-3xl animate-pulse-slow ${c}`}
-               style={{ top: i === 0 ? '-10%' : '33%', left: i === 0 ? '-10%' : 'auto',
-                        right: i === 1 ? '-5%' : 'auto', animationDelay: `${i * 2}s` }} />
-        ))}
+      <div className="flex flex-col flex-1 max-w-7xl w-full mx-auto px-6 py-4 gap-4 overflow-hidden">
+
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`w-10 h-10 ${cfg.iconBg} rounded-lg flex items-center justify-center shadow-sm flex-shrink-0`}>
+          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+          </svg>
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 leading-tight">{cfg.label}</h1>
+          <p className="text-xs text-gray-500 leading-snug">Visualize how algorithms navigate through a grid to find the shortest path</p>
+        </div>
       </div>
 
-      <header className="relative z-10 pt-6 pb-4 px-6">
-        <Link to="/" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-            <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
-          </svg>
-          Back to Home
-        </Link>
-        <div className="text-center">
-          <h1 className="text-4xl md:text-5xl font-bold">
-            <span className={`bg-gradient-to-r ${cfg.gradient} bg-clip-text text-transparent`}>
-              {cfg.label}
-            </span>
-            <span className="text-slate-500 font-light ml-3">Visualizer</span>
-          </h1>
-          <p className="mt-2 text-sm text-slate-500 font-mono tracking-wide">{cfg.note}</p>
-        </div>
-      </header>
 
-      <main className="relative z-10 flex-1 flex flex-col items-center px-4 md:px-8 pb-8 gap-6 max-w-7xl mx-auto w-full">
-        <p className="text-sm text-slate-400 font-mono tracking-wide">
-          Click and drag to draw walls. Click a wall to erase it.
-        </p>
+      {/* Main Grid Layout — fills remaining height */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-0">
 
-        {/* Grid */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 md:p-6 shadow-2xl"
-        >
-          <div className="grid gap-[1px] bg-white/[0.08] border border-white/[0.08]"
-               style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
-                        width: 'min(90vw, 1000px)', aspectRatio: `${COLS} / ${ROWS}` }}>
-            {Array.from({ length: ROWS }, (_, r) =>
-              Array.from({ length: COLS }, (_, c) => (
-                <GridNode key={`${r}-${c}`} row={r} col={c} status={getStatus(r, c)}
-                          onMouseDown={handleMouseDown} onMouseEnter={handleMouseEnter}
-                          onMouseUp={handleMouseUp} />
-              ))
-            )}
+        {/* Left: Grid visualizer — 3/4 width, fills height */}
+        <div className="lg:col-span-3 flex flex-col gap-3 min-h-0">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">{cfg.label}</h2>
+            <p className="text-xs text-gray-500 mt-0.5">{cfg.description}</p>
           </div>
-        </motion.div>
 
-        {/* Controls panel */}
-        <div className="w-full max-w-xl bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 flex flex-col gap-4 shadow-xl">
-          <div className="flex justify-center gap-3">
-            <button onClick={clearPath}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-sm font-medium rounded-lg border border-slate-700 transition-colors">
-              Clear Path
+          {/* Grid container — grows to fill all available vertical space */}
+          <div className="flex-1 bg-white border border-gray-200 rounded-xl p-3 shadow-sm overflow-hidden min-h-0">
+            <p className="text-xs text-gray-400 mb-2 font-medium">Click and drag to draw walls. Click a wall to erase it.</p>
+            <div
+              className="grid gap-[1px] bg-gray-200 border border-gray-200 rounded-md overflow-hidden mx-auto"
+              style={{
+                gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
+                width: '100%',
+                aspectRatio: `${COLS} / ${ROWS}`
+              }}
+            >
+              {Array.from({ length: ROWS }, (_, r) =>
+                Array.from({ length: COLS }, (_, c) => (
+                  <GridNode key={`${r}-${c}`} row={r} col={c} status={getStatus(r, c)}
+                            onMouseDown={handleMouseDown} onMouseEnter={handleMouseEnter}
+                            onMouseUp={handleMouseUp} />
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-2 gap-3 flex-shrink-0">
+            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+              <span className="text-xs text-gray-500 font-medium">Nodes Visited</span>
+              <div className="text-2xl font-bold text-blue-600 mt-0.5">{stats.visited}</div>
+            </div>
+            <div className="bg-yellow-50 border border-yellow-100 rounded-xl px-4 py-3">
+              <span className="text-xs text-gray-500 font-medium">Path Length</span>
+              <div className="text-2xl font-bold text-yellow-600 mt-0.5">{stats.path}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Controls Panel */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 flex flex-col gap-3 h-fit">
+          <div>
+            <h3 className="text-base font-bold text-gray-900">Controls</h3>
+            <p className="text-xs text-gray-500">Configure and run pathfinding</p>
+          </div>
+
+          {/* Speed Slider */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-gray-700">Speed: {Math.max(0, Math.round(100 - (viz.speed - 20) / 1.8))}%</label>
+            <input
+              type="range" min="20" max="200" step="10"
+              value={220 - viz.speed}
+              onChange={(e) => viz.setSpeed(220 - Number(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-800"
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={onPlayPause}
+              disabled={viz.isComplete}
+              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg px-5 py-3 flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {viz.isPlaying ? (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+              ) : (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+              )}
+              {viz.isPlaying ? 'Pause' : 'Find Path'}
             </button>
-            <button onClick={clearAll}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-sm font-medium rounded-lg border border-slate-700 text-rose-400 transition-colors">
-              Clear All
+            <button
+              onClick={clearPath}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg p-3 transition-colors border border-gray-200 text-sm font-medium"
+              title="Clear Path"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <button
+              onClick={clearAll}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg p-3 transition-colors border border-gray-200 text-sm font-medium"
+              title="Clear All"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
             </button>
           </div>
-          <Controls
-            isPlaying={viz.isPlaying}     onPlayPause={onPlayPause}
-            onStepForward={viz.stepForward} onStepBack={viz.stepBack}
-            onReset={clearPath}           onShuffle={clearAll}
-            speed={viz.speed}             onSpeedChange={viz.setSpeed}
-            currentStep={viz.currentStep} totalSteps={viz.history.length}
-            isSorting={viz.isSorting}     isComplete={viz.isComplete}
-            // arraySize intentionally omitted — Controls hides that slider automatically
-          />
+
+          {/* Legend */}
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-gray-700">Legend</span>
+            <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+              <div className="flex items-center gap-2"><span className="w-4 h-4 rounded bg-emerald-500 flex-shrink-0"></span>Start</div>
+              <div className="flex items-center gap-2"><span className="w-4 h-4 rounded bg-rose-500 flex-shrink-0"></span>End</div>
+              <div className="flex items-center gap-2"><span className="w-4 h-4 rounded bg-gray-700 flex-shrink-0"></span>Wall</div>
+              <div className="flex items-center gap-2"><span className="w-4 h-4 rounded bg-blue-200 flex-shrink-0"></span>Visited</div>
+              <div className="flex items-center gap-2"><span className="w-4 h-4 rounded bg-blue-100 flex-shrink-0"></span>Queued</div>
+              <div className="flex items-center gap-2"><span className="w-4 h-4 rounded bg-yellow-400 flex-shrink-0"></span>Path</div>
+            </div>
+          </div>
+
+          {/* Complexity */}
+          <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+            <h4 className="text-sm font-bold text-gray-900 mb-2">Complexity Analysis</h4>
+            <div className="flex flex-col gap-1 text-sm text-gray-600">
+              <div>Time: <span className="font-mono text-gray-900">{cfg.time}</span></div>
+              <div>Space: <span className="font-mono text-gray-900">{cfg.space}</span></div>
+              <div className="mt-1 text-xs text-gray-400">{cfg.note}</div>
+            </div>
+          </div>
         </div>
-      </main>
+
+      </div>
+      </div>
     </div>
   );
 }

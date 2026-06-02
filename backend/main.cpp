@@ -54,7 +54,7 @@ int main() {
                 return;
             }
 
-            // 3. Allocate a raw int* array — NO std::vector
+            // 3. Allocate a raw int* array
             int* arr = new int[size];
             for (int i = 0; i < size; i++) {
                 arr[i] = jsonArray[i].get<int>();

@@ -191,8 +191,6 @@ int main() {
                 runBFS(rows, cols, startR, startC, endR, endC, grid, history);
             } else if (algorithm == "dfs") {
                 runDFS(rows, cols, startR, startC, endR, endC, grid, history);
-            } else if (algorithm == "dijkstra") {
-                runDijkstra(rows, cols, startR, startC, endR, endC, grid, history);
             } else {
                 res.status = 400;
                 res.set_content("{\"error\":\"Unknown algorithm: " + algorithm + "\"}", "application/json");
